@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+const schema = z.object({ name: z.string().trim().min(2).max(80), phone: z.string().trim().regex(/^\+?[0-9][0-9\s()-]{7,16}$/).or(z.literal("")) });
+export async function PATCH(request: Request) { const session = await auth(); if (!session?.user?.id) return NextResponse.json({ error: "Sign in required." }, { status: 401 }); if (!process.env.DATABASE_URL) return NextResponse.json({ error: "Profile unavailable." }, { status: 503 }); const parsed = schema.safeParse(await request.json().catch(() => null)); if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Check your details." }, { status: 400 }); const phone = parsed.data.phone || null; if (phone) { const existing = await prisma.user.findFirst({ where: { phone, id: { not: session.user.id } }, select: { id: true } }); if (existing) return NextResponse.json({ error: "That phone number is already in use." }, { status: 409 }); } await prisma.user.update({ where: { id: session.user.id }, data: { name: parsed.data.name, phone } }); return NextResponse.json({ success: true }); }

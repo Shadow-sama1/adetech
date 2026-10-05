@@ -1,0 +1,3 @@
+import { prisma } from "@/lib/prisma";
+import ProductManager from "@/app/admin/products/product-manager";
+export default async function AdminProductsPage() { const [categories, products] = process.env.DATABASE_URL ? await Promise.all([prisma.category.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }), prisma.product.findMany({ include: { category: { select: { name: true } } }, orderBy: { updatedAt: "desc" } })]) : [[], []]; return <section className="admin-section"><div className="admin-section-heading"><div><p className="eyebrow">Catalog & inventory</p><h2>Products and stock</h2></div></div><ProductManager categories={categories} products={products} /></section>; }
